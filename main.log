@@ -1,10 +1,9 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.2) (preloaded format=xelatex 2026.3.18)  18 MAR 2026 23:36
+This is XeTeX, Version 3.141592653-2.6-0.999998 (MiKTeX 26.2) (preloaded format=xelatex 2026.3.18)  19 MAR 2026 15:57
 entering extended mode
  restricted \write18 enabled.
- file:line:error style messages enabled.
  %&-line parsing enabled.
-**c:/Users/3unf10we2/OneDrive/MyFile/临时文件/研究生毕业论文/毕业论文格式latex模板/main.tex
-(c:/Users/3unf10we2/OneDrive/MyFile/临时文件/研究生毕业论文/毕业论文格式latex模板/main.tex
+**./main.tex
+(main.tex
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
 (gdutthesis.cls (C:\Apps\MiKTeX\tex/latex/l3kernel\expl3.sty
@@ -2298,49 +2297,20 @@ oldItalicFont={*-Regular},BoldFont={*-Regular},ItalicFont={*-Regular}].
 
 ] [2] [3
 
-])
-(data/notation.tex [4]
-LaTeX Font Info:    Font shape `TU/XITSMath-Regular.otf(2)/m/n' will be
-(Font)              scaled to size 7.00075pt on input line 5.
-LaTeX Font Info:    Font shape `TU/XITSMath-Regular.otf(2)/m/n' will be
-(Font)              scaled to size 5.00053pt on input line 5.
-LaTeX Font Info:    Font shape `TU/XITSMath-Regular.otf(3)/m/n' will be
-(Font)              scaled to size 6.99925pt on input line 5.
-LaTeX Font Info:    Font shape `TU/XITSMath-Regular.otf(3)/m/n' will be
-(Font)              scaled to size 4.99947pt on input line 5.
-)
-
-Package glossaries Info: Preparing to sort glossary `main' (total number of
-(glossaries)             referenced entries: 2)
-
-[5
-
-] [6
-
-] [7
-
-] (main.toc)
+]) [4] (main.toc)
 \tf@toc=\write5
 \openout5 = `main.toc'.
 
- [8
+ [5
 
 ] (main.tec)
 \tf@tec=\write6
 \openout6 = `main.tec'.
 
- [9
+ [6
 
 ] (data/chap01.tex
 第一章
-
-Package natbib Warning: Citation `chendengyuan2000guoshi' on page 1 undefined o
-n input line 11.
-
-
-Package natbib Warning: Citation `woerdelun2012jingji' on page 1 undefined on i
-nput line 11.
-
 [1
 
 
@@ -2349,24 +2319,75 @@ File: example-image.pdf Graphic file (type pdf)
 <use example-image.pdf>
 File: example-image.pdf Graphic file (type pdf)
 <use example-image.pdf>
-) (data/conclusion.tex [2]
+LaTeX Font Info:    Font shape `TU/XITSMath-Regular.otf(2)/m/n' will be
+(Font)              scaled to size 7.00075pt on input line 57.
+LaTeX Font Info:    Font shape `TU/XITSMath-Regular.otf(2)/m/n' will be
+(Font)              scaled to size 5.00053pt on input line 57.
+LaTeX Font Info:    Font shape `TU/XITSMath-Regular.otf(3)/m/n' will be
+(Font)              scaled to size 6.99925pt on input line 57.
+LaTeX Font Info:    Font shape `TU/XITSMath-Regular.otf(3)/m/n' will be
+(Font)              scaled to size 4.99947pt on input line 57.
+) (data/chap02.tex [2]
 第二章
-)
-No file main.bbl.
-(data/result.tex [3
+) (data/chap03.tex [3
 
-]) (data/acknowledgement.tex [4
+]
+第三章
+) (data/chap04.tex [4
 
-]) (data/appendix.tex
-[5
+]
+第四章
+) (data/conclusion.tex [5
+
+]
+第五章
+) (main.bbl [6
+
+]
+Underfull \hbox (badness 1210) in paragraph at lines 69--74
+[]\TU/FandolSong(0)/m/n/12.045 杨 保 军\TU/XITS(0)/m/n/12.045 .  \TU/FandolSong(0)
+/m/n/12.045 新 闻 道 德 论\TU/XITS(0)/m/n/12.045 [D/OL].  \TU/FandolSong(0)/m/n/12.0
+45 北 京\TU/XITS(0)/m/n/12.045 : \TU/FandolSong(0)/m/n/12.045 中 国 人 民 大 学 出 版 社\T
+U/XITS(0)/m/n/12.045 , 2012[2012-11-
+ []
+
+[7
+
+] [8] [9]
+Underfull \hbox (badness 10000) in paragraph at lines 320--327
+[] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [
+] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] []
+ [] [] [] [] [] [] [] [] [] [] []
+ []
+
+[10] [11] [12] [13]
+Underfull \hbox (badness 10000) in paragraph at lines 612--618
+[] [] [] [] [] [] [] [] [] [] [][] [] [] [] [] [] [] [] [] [] [] [] [] [] [] []
+ [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] 
+[] [] [] [] [] [] [] [] [] []
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 612--618
+[][] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] []
+ [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] [] 
+[] [] [] [] [] []
+ []
+
+[14] [15] [16]) (data/result.tex [17]) (data/acknowledgement.tex [18
+
+])
+(data/appendix.tex [19
 
 ]
 附录 A
-) [6
+) [20
 
 ]
 
-Package natbib Warning: There were undefined citations.
+Package glossaries Warning: No \printnoidxglossary or \printnoidxglossaries
+ found. (Remove \makenoidxglossaries if you don't want any glossaries.)
+This document will not have a glossary.
 
 (main.aux)
  ***********
@@ -2374,15 +2395,15 @@ LaTeX2e <2025-11-01>
 L3 programming layer <2020/04/10>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: 0D8EE029D7D6E3DB7007ED0351CBB9EF;1459.
+(rerunfilecheck)             Checksum: 5FDF90A49FD85EDEC36CD68347D0F47B;1696.
  ) 
 Here is how much of TeX's memory you used:
- 53488 strings out of 402983
- 1117884 string characters out of 5454692
- 1851613 words of memory out of 5000000
- 81438 multiletter control sequences out of 15000+600000
+ 53912 strings out of 402983
+ 1130712 string characters out of 5454692
+ 1853889 words of memory out of 5000000
+ 81853 multiletter control sequences out of 15000+600000
  635032 words of font info for 175 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 118i,15n,131p,2825b,2768s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 118i,15n,131p,2765b,2844s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on main.pdf (18 pages).
+Output written on main.xdv (29 pages, 450548 bytes).
