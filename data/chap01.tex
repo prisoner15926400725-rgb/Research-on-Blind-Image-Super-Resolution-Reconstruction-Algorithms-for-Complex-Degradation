@@ -1,70 +1,92 @@
 \chapter{绪论}{Introduction}
+\label{chap:intro}
 
-\section{本课题研究背景及研究意义}{Background and significance of research}
+\section{研究背景及意义}{Research Background and Significance}
 
-\zhlipsum[1]
+图像超分辨率（Super-Resolution, SR）是指从一幅或多幅低分辨率（Low-Resolution, LR）图像中恢复出对应高分辨率（High-Resolution, HR）图像的技术。随着数字成像设备在安防监控、医学影像、遥感观测、智能手机摄影等领域的广泛应用，人们对图像分辨率与视觉质量的要求日益提高。然而，受限于成像设备的硬件条件、拍摄距离、大气扰动等因素，实际获取的图像往往分辨率不足、细节模糊，难以满足后续分析与处理的需求。图像超分辨率技术能够在不改变硬件条件的前提下有效提升图像质量，因而具有重要的研究价值和广阔的应用前景。
 
-\section{国内外相关研究现状}{Analysis of the research status at home and abroad}
+近年来，深度学习技术的快速发展为图像超分辨率领域带来了革命性的突破。从最早的SRCNN\cite{dong2014learning}到后续的EDSR\cite{lim2017enhanced}、RCAN\cite{zhang2018image}，再到基于Transformer架构的SwinIR\cite{liang2021swinir}和HAT\cite{chen2023activating}，基于深度学习的超分辨率方法在峰值信噪比（Peak Signal-to-Noise Ratio, PSNR）和结构相似性（Structural Similarity, SSIM）等客观评价指标上不断取得突破。同时，基于生成对抗网络（Generative Adversarial Network, GAN）的方法如SRGAN\cite{ledig2017photo}和ESRGAN\cite{wang2018esrgan}则在感知质量方面展现出显著优势，能够生成纹理丰富、视觉逼真的超分辨率图像。
 
-\subsection{测试}{test}
+然而，上述方法大多基于简化的退化假设，即假设低分辨率图像是由高分辨率图像经过已知且固定的退化过程（如双三次下采样）得到的。这一假设与真实世界中复杂多变的退化过程存在较大差距。实际场景中，图像的退化过程通常涉及多种因素的耦合作用，包括未知的模糊核、不同类型和强度的噪声、压缩伪影以及多次退化的级联效应等。当训练数据的退化模式与实际退化不匹配时，超分辨率模型的性能会严重下降，产生明显的伪影和失真。因此，面向复杂退化场景的盲超分辨率（Blind Super-Resolution）重建成为当前研究的核心挑战之一。盲超分辨率要求模型在退化类型和参数均未知的条件下实现高质量的图像重建，这对模型的退化感知能力和泛化性能提出了更高的要求。
 
-测试\gdutcite{chendengyuan2000guoshi}，测试\gdutcite*{woerdelun2012jingji}。
+本课题的研究具有重要的理论价值和应用意义。在理论层面，深入探索面向复杂退化的盲超分辨率重建算法，有助于揭示图像退化与重建之间的内在关系，推动退化建模、特征表示与图像生成等基础理论的发展。在应用层面，面向复杂退化的盲超分辨率技术能够有效提升真实场景下图像的视觉质量，在安防监控中增强模糊人脸与车牌的辨识度，在医学影像中提高病灶区域的分辨率以辅助诊断，在遥感领域中改善卫星图像的地物识别精度，具有广泛的实际应用价值。
 
-测试如\autoref{fig:example} 所示，具体参考\autoref{sub-fig-1} 和\autoref{sub-fig-2}。
+\section{国内外相关研究现状}{Related Work}
 
-测试参考\autoref{eq:example}。
+图像超分辨率重建的研究经历了从传统方法到深度学习方法的演进历程。按照技术路线的不同，可以将现有研究分为基于传统方法的图像超分辨率、基于卷积神经网络的图像超分辨率、基于生成对抗网络的图像超分辨率、盲图像超分辨率以及面向复杂退化的超分辨率方法五个方向。
 
-测试参考\autoref{tab:example}。
+\subsection{基于传统方法的图像超分辨率}{Traditional Image Super-Resolution Methods}
 
-测试\gls{slm}，\gls{slm}，\gls{glm}，\gls{glm}。
+早期的图像超分辨率方法主要依赖插值算法和基于样本的重建策略。插值方法通过对已知像素点进行数学插值来估计缺失的高频信息，是最基本的图像放大方法。
 
-\subsubsection{测试}
-测试 test。
-\paragraph{测试 test。}
-测试 test。
-\subparagraph{测试 test。}
-测试 test。
+Keys等人提出了双三次插值（Bicubic Interpolation）方法\cite{keys1981cubic}，通过三次多项式函数对图像进行重采样，相比双线性插值能够产生更平滑的放大结果，至今仍被广泛用作超分辨率方法的基线比较和预处理步骤。Freeman等人提出了基于样例学习（Example-Based）的超分辨率方法\cite{freeman2002example}，通过构建低分辨率与高分辨率图像块之间的映射关系，利用马尔可夫随机场模型从训练样本中学习高频细节的恢复规律。Glasner等人提出了基于自相似性的单图超分辨率方法\cite{glasner2009super}，利用自然图像中跨尺度重复出现的纹理模式进行超分辨率重建，无需外部训练数据即可实现较好的重建效果。Yang等人基于稀疏表示理论提出了图像超分辨率方法\cite{yang2010image}，通过学习低分辨率与高分辨率图像块的联合稀疏字典，将超分辨率问题转化为稀疏编码优化问题。Timofte等人提出了锚定邻域回归方法\cite{timofte2013anchored}，通过预计算邻域回归函数显著加速了基于样例学习的超分辨率方法的推理速度。
 
-\begin{equation}\label{eq:example}
-  E = mc^2
-\end{equation}
+由上述文献可知，基于传统方法的图像超分辨率虽然在一定程度上能够提升图像分辨率，但受限于手工设计的特征和先验知识的表达能力，在复杂场景下难以恢复丰富的高频纹理细节，且计算效率与重建质量之间存在明显的矛盾。
 
-\begin{align}
-  E &= mc^2 \\
-  mc^2 &= E
-\end{align}
+\subsection{基于卷积神经网络的图像超分辨率}{CNN-based Image Super-Resolution Methods}
 
-\begin{gather}
-  E = mc^2 \\
-  mc^2 = E
-\end{gather}
+随着深度学习技术的发展，基于卷积神经网络（Convolutional Neural Network, CNN）的超分辨率方法在重建质量上取得了显著突破，已成为该领域的主流研究方向。
 
-\begin{figure}
-  \subfloat[贴有模板的金属喷嘴示意图]{\label{sub-fig-1}
-    \includegraphics[width=0.4\textwidth]{example-image.pdf}
-  }
-  \qquad
-  \subfloat[由点到线扫描加工原理图]{\label{sub-fig-2}
-    \includegraphics[width=0.4\textwidth]{example-image.pdf}
-  }
-  \bicaption{模板射流电解加工微沟槽原理图}{Principle of masked jet electrochemical machining of micro grooves}
-  \label{fig:example}
-\end{figure}
+Dong等人提出了开创性的SRCNN模型\cite{dong2014learning}，首次将深度学习引入图像超分辨率领域。该方法采用三层卷积网络实现端到端的低分辨率到高分辨率图像映射，在PSNR指标上显著超越了传统方法，验证了深度学习在超分辨率任务中的巨大潜力。随后，Dong等人进一步提出了FSRCNN\cite{dong2016accelerating}，通过在低分辨率空间进行特征提取并在网络末端使用转置卷积进行上采样，大幅提升了推理速度。Kim等人提出了VDSR\cite{kim2016accurate}，通过堆叠20层卷积网络并引入全局残差学习策略，显著提升了重建精度，验证了网络深度对超分辨率性能的重要性。Shi等人提出了ESPCN\cite{shi2016real}，引入亚像素卷积（Sub-Pixel Convolution）层实现高效的上采样操作，在保证重建质量的同时实现了实时超分辨率。
 
-\begin{table}
-  \bicaption{DMC5400A 运动控制卡主要技术指标}{DMC5400A main specifications}
-  \label{tab:example}
-  \begin{tabular}{cc}
-    \toprule
-    控制卡技术指标              & 具体参数                      \\
-    \midrule
-    控制电机的脉冲信号频率范围  & $\SI{1}{Hz}\sim\SI{2}{MHz}$   \\
-    控制电机的脉冲信号频率精度  & \SI{0.0625}{Hz}               \\
-    脉冲信号输出最大电流        & \SI{20}{mA}                   \\
-    脉冲信号长度                & 28 位有符号                   \\
-    直线插补精度                & $\pm \SI{0.8}{pulse}$         \\
-    圆弧插补精度                & $\pm \SI{1.5}{pulse}$         \\
-    支持的插补坐标系个数        & 2                             \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+在网络结构设计方面，Lim等人提出了EDSR\cite{lim2017enhanced}，通过移除批归一化层并采用残差缩放策略构建了深度残差网络，在当时的超分辨率基准测试中取得了最优性能。Zhang等人提出了RDN\cite{zhang2018residual}，通过密集连接的残差块充分利用了不同层级的特征信息，增强了特征的重用效率。Zhang等人进一步提出了RCAN\cite{zhang2018image}，引入通道注意力机制自适应地调整不同通道特征的重要性权重，使网络能够更加关注对超分辨率重建有贡献的特征通道。近年来，基于Transformer架构的超分辨率方法逐渐兴起。Liang等人提出了SwinIR\cite{liang2021swinir}，将Swin Transformer\cite{liu2021swin}的窗口自注意力机制引入图像恢复任务，通过局部窗口与移位窗口的交替计算实现了高效的全局特征建模。Chen等人提出了HAT\cite{chen2023activating}，通过混合注意力机制进一步激活了更多像素参与超分辨率重建，在多个基准数据集上刷新了性能记录。
+
+由上述文献可知，基于CNN和Transformer的超分辨率方法在网络深度、注意力机制、特征复用等方面不断创新，在标准基准测试中取得了优异的重建性能。然而，这些方法大多假设退化过程已知且固定，当面对真实世界中未知且复杂的退化场景时，模型的泛化能力仍然不足。
+
+\subsection{基于生成对抗网络的图像超分辨率}{GAN-based Image Super-Resolution Methods}
+
+基于像素级损失函数（如L1、L2损失）优化的超分辨率方法虽然能获得较高的PSNR值，但往往产生过度平滑的结果，缺乏真实感。生成对抗网络的引入为生成感知质量更高的超分辨率图像提供了新的途径。
+
+Goodfellow等人于2014年提出了生成对抗网络（GAN）\cite{goodfellow2014generative}的基本框架，通过生成器与判别器的对抗训练实现了高质量图像生成。Ledig等人基于此提出了SRGAN\cite{ledig2017photo}，首次将GAN应用于图像超分辨率任务，结合感知损失\cite{johnson2016perceptual}和对抗损失进行训练，生成了纹理丰富、视觉逼真的超分辨率图像，在感知质量上大幅超越了基于像素损失的方法。Wang等人提出了ESRGAN\cite{wang2018esrgan}，通过引入残差中残差密集块（RRDB）改进了生成器架构，并采用Relativistic GAN改进了判别器设计，进一步提升了生成图像的纹理细节和真实感。
+
+针对真实世界图像超分辨率问题，Wang等人提出了Real-ESRGAN\cite{wang2021realesrgan}，首次引入二阶退化模型模拟真实世界中的复杂退化过程，通过高阶退化合成策略生成更接近真实退化的训练数据，显著提升了模型在真实场景下的泛化能力。Zhang等人提出了BSRGAN\cite{zhang2021designing}，通过随机化退化顺序和参数构建了更加多样化的退化模型，增强了模型对不同退化模式的适应性。
+
+由上述文献可知，基于GAN的超分辨率方法在感知质量方面取得了显著进展，特别是二阶退化模型的提出为真实世界超分辨率提供了重要的退化建模范式。然而，GAN方法在训练稳定性、模式坍塌以及生成伪影控制方面仍然面临挑战，且退化模型的设计主要依赖于人工先验，难以完全覆盖真实世界中的所有退化模式。
+
+\subsection{盲图像超分辨率研究现状}{Blind Image Super-Resolution}
+
+盲图像超分辨率旨在退化过程未知的条件下实现高质量的图像重建。根据退化信息的利用方式，现有方法可分为显式退化估计方法和隐式退化表示方法两大类。
+
+在显式退化估计方面，Gu等人提出了IKC\cite{gu2019blind}，通过迭代核校正策略交替估计模糊核与超分辨率图像，逐步优化退化核估计的准确性。Bell-Kligler等人提出了KernelGAN\cite{bell2019kernelgan}，利用图像内部跨尺度的自相似性，通过训练一个内部GAN估计图像特定的退化核，无需外部训练数据即可实现退化核估计。Liang等人提出了MANet\cite{liang2021mutual}，通过互仿射网络估计空间变化的退化核，能够处理退化在空间上非均匀分布的情况，更加贴合真实场景中退化的空间变化特性。
+
+在隐式退化表示方面，Luo等人提出了DAN\cite{luo2020unfolding}，将交替优化过程展开为端到端网络，通过估计器和恢复器的交替迭代隐式地学习退化信息并指导超分辨率重建。Wang等人提出了DASR\cite{wang2021unsupervised}，采用对比学习策略无监督地学习退化表示，通过将不同退化类型的图像映射到不同的特征空间区域，使超分辨率网络能够自适应地适配不同退化条件。Luo等人进一步提出了DCLS\cite{luo2022deep}，通过深度约束最小二乘方法在特征空间中进行退化核估计与图像恢复的联合优化。
+
+由上述文献可知，盲超分辨率方法在退化估计的准确性和泛化性方面取得了显著进展。然而，显式退化估计方法的性能高度依赖于估计精度，估计误差会在后续重建过程中被放大；隐式退化表示方法虽然避免了显式估计的误差累积，但在面对复杂的多因素耦合退化时，退化表示的表达能力和区分度仍然不足。
+
+\subsection{面向复杂退化的超分辨率方法}{Super-Resolution Methods for Complex Degradation}
+
+近年来，随着扩散模型（Diffusion Model）在图像生成领域的突破性进展，研究者们开始将扩散模型的强大生成先验引入图像超分辨率任务，为处理复杂退化场景提供了新的思路。
+
+Wang等人提出了StableSR\cite{wang2023exploiting}，将预训练的Stable Diffusion模型作为生成先验引入真实世界图像超分辨率任务，通过时间感知编码器和可控特征融合模块，在保持扩散模型强大生成能力的同时实现了对超分辨率重建过程的有效控制。Lin等人提出了DiffBIR\cite{lin2023diffbir}，采用两阶段策略，首先通过退化去除模块消除严重退化，然后利用扩散模型的生成先验恢复高质量的细节纹理，在真实退化图像上展现了良好的恢复效果。Yue等人提出了ResShift\cite{yue2024resshift}，通过残差偏移策略大幅减少了扩散模型所需的采样步数，在保持生成质量的同时将推理速度提升了一个数量级。Wu等人提出了SeeSR\cite{wu2024seesr}，引入语义感知机制指导扩散模型的超分辨率过程，通过利用图像的语义信息增强了重建结果的语义一致性和细节真实性。
+
+由上述文献可知，基于扩散模型的超分辨率方法利用强大的生成先验在处理复杂退化方面展现了优异的性能，但仍然面临推理速度慢、计算资源需求大、生成内容与原始图像的一致性难以保证等挑战。此外，现有方法在退化感知能力和自适应重建策略方面仍有提升空间。
+
+\subsection{研究现状总结}{Summary of Related Work}
+
+综合以上分析，图像超分辨率重建领域的研究已取得了丰硕成果，但仍然存在以下不足和研究空白：
+
+基于传统方法的超分辨率受限于手工特征的表达能力，在复杂场景下难以恢复高频细节。基于CNN和Transformer的超分辨率方法在标准基准测试中表现优异，但大多依赖于已知的固定退化假设，面对真实世界的复杂退化时泛化能力不足。基于GAN的方法在感知质量方面取得了重要进展，二阶退化模型为真实世界超分辨率提供了有效的退化建模范式，但训练稳定性和伪影控制仍是需要解决的问题。盲超分辨率方法在退化估计方面做出了有益探索，但在面对多因素耦合的复杂退化时，退化表示的准确性和鲁棒性有待提升。基于扩散模型的方法虽然展现了强大的生成能力，但推理效率和一致性保持方面仍需改进。
+
+因此，如何设计高效且鲁棒的盲超分辨率重建算法，使其能够在复杂退化条件下自适应地感知退化信息并实现高质量的图像重建，是当前亟需解决的关键问题。本文围绕这一核心问题展开研究，提出面向复杂退化的图像盲超分辨率重建算法。
+
+\section{本文主要研究工作与章节安排}{Main Contributions and Organization}
+
+\subsection{论文的主要研究工作}{Main Research Work}
+
+本文围绕面向复杂退化的图像盲超分辨率重建问题，结合退化建模、特征表示与图像重建等关键技术，开展以下主要研究工作：
+
+\begin{enumerate}
+  \item \textbf{面向复杂退化的盲超分辨率重建方法研究：}针对真实世界中退化类型多样、退化参数未知的挑战，研究有效的退化感知与特征提取策略，设计能够自适应处理多种复杂退化的超分辨率重建网络，提升模型在未知退化条件下的重建质量和泛化能力。
+  \item \textbf{基于改进策略的图像盲超分辨率重建方法研究：}针对现有盲超分辨率方法在退化表示能力和重建质量方面的不足，探索更加有效的网络架构设计和训练策略，进一步提升复杂退化场景下的超分辨率重建性能，增强模型对退化变化的鲁棒性和适应性。
+\end{enumerate}
+
+\subsection{论文的章节安排}{Organization of This Thesis}
+
+本论文共分为五章，各章内容安排如下：
+\begin{itemize}
+  \item 第一章为绪论，介绍图像超分辨率重建的研究背景和意义，综述国内外相关研究现状，分析现有方法的优势与不足，并给出本文的主要研究工作和章节安排；
+  \item 第二章为相关理论及技术，系统介绍图像退化模型、卷积神经网络基础、图像超分辨率重建基本框架、生成对抗网络、盲超分辨率的退化估计方法以及常用评价指标等理论基础；
+  \item 第三章提出面向复杂退化的盲超分辨率重建方法，详细阐述所提方法的网络架构设计、关键模块设计与实现，并通过实验验证方法的有效性；
+  \item 第四章提出基于改进策略的图像盲超分辨率重建方法，进一步优化网络结构与训练策略，并进行全面的实验分析与对比评估；
+  \item 第五章对全文工作进行总结，分析现有研究的不足，并展望未来可能的研究方向。
+\end{itemize}

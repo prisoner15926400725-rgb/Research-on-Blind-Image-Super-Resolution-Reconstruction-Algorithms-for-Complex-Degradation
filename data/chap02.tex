@@ -1,1 +1,399 @@
 \chapter{相关理论及技术}{Related Theories and Technologies}
+\label{chap:related}
+
+\section{引言}{Introduction}
+
+本章围绕本文研究所涉及的关键理论与技术进行系统梳理，为后续方法设计与实验分析提供基础支撑。图像盲超分辨率重建涉及退化建模、特征提取、图像重建等多个环节，需要综合运用卷积神经网络的局部特征表达能力、生成对抗网络的图像生成能力以及退化估计方法的退化感知能力。
+
+具体而言，首先介绍图像退化模型的基本形式，包括经典退化模型与真实世界复杂退化模型；随后介绍卷积神经网络的基本结构与关键组件，为后续章节的网络设计提供理论基础；接着概述图像超分辨率重建的基本框架，包括上采样策略与损失函数设计；然后介绍生成对抗网络的基本原理与训练策略；之后梳理盲超分辨率中常用的退化估计方法；最后给出本文实验所使用的常用评价指标定义。
+
+\section{图像退化模型}{Image Degradation Models}
+
+图像退化模型描述了高分辨率图像转变为低分辨率图像的数学过程，是超分辨率重建算法设计的基础。退化模型的准确性直接影响训练数据的质量和模型的泛化能力。本节分别介绍经典退化模型和真实世界复杂退化模型。
+
+\subsection{经典退化模型}{Classical Degradation Model}
+
+经典的图像退化模型假设低分辨率图像 $y$ 由高分辨率图像 $x$ 经过模糊、下采样和噪声污染三个步骤得到，其数学表达式为：
+\begin{equation}
+  y = (x \otimes k)\!\downarrow_s + n
+  \label{eq:classical_degradation}
+\end{equation}
+其中，$x$ 表示高分辨率图像，$k$ 表示模糊核（blur kernel），$\otimes$ 表示卷积运算，$\downarrow_s$ 表示缩放因子为 $s$ 的下采样操作，$n$ 表示加性噪声，$y$ 为得到的低分辨率图像。
+
+\textbf{模糊核。}模糊核用于模拟成像过程中的光学模糊、运动模糊等退化因素。常用的模糊核类型包括各向同性高斯核和各向异性高斯核。各向同性高斯核的概率密度函数为：
+\begin{equation}
+  k(u,v) = \frac{1}{2\pi\sigma^2}\exp\left(-\frac{u^2+v^2}{2\sigma^2}\right)
+  \label{eq:isotropic_gaussian}
+\end{equation}
+其中，$(u,v)$ 为空间坐标，$\sigma$ 为标准差。各向异性高斯核引入协方差矩阵 $\Sigma$ 来描述不同方向上的模糊程度差异：
+\begin{equation}
+  k(u,v) = \frac{1}{2\pi|\Sigma|^{1/2}}\exp\left(-\frac{1}{2}[u,v]\Sigma^{-1}[u,v]^{\top}\right)
+  \label{eq:anisotropic_gaussian}
+\end{equation}
+
+\textbf{下采样操作。}下采样操作将模糊后的图像缩小为原始分辨率的 $1/s$，常用的方式包括最近邻下采样和双三次下采样。
+
+\textbf{噪声模型。}加性噪声用于模拟成像传感器的热噪声和电子噪声。常用的噪声模型包括加性高斯白噪声（Additive White Gaussian Noise, AWGN），其概率密度函数为：
+\begin{equation}
+  p(n) = \frac{1}{\sqrt{2\pi}\sigma_n}\exp\left(-\frac{n^2}{2\sigma_n^2}\right)
+  \label{eq:awgn}
+\end{equation}
+其中，$\sigma_n$ 为噪声标准差，控制噪声强度。
+
+经典退化模型结构简洁、参数可控，被广泛用于超分辨率方法的训练与评估。然而，真实世界中的退化过程远比上述模型复杂，单一的模糊-下采样-噪声管道难以覆盖实际场景中多样化的退化模式。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.75\textwidth]{example-image}
+  \bicaption{经典图像退化模型示意图}{Illustration of classical image degradation model}
+  \label{fig:classical_degradation}
+\end{figure}
+
+如\autoref{fig:classical_degradation}所示，经典退化模型通过模糊、下采样和加噪三个步骤依次作用于高分辨率图像，生成对应的低分辨率退化图像。
+
+\subsection{真实世界复杂退化模型}{Real-World Complex Degradation Model}
+
+为了缩小合成训练数据与真实退化图像之间的分布差距，研究者提出了更加复杂的退化模型来模拟真实世界中的多因素耦合退化过程。
+
+Wang等人在Real-ESRGAN\cite{wang2021realesrgan}中提出了二阶退化模型（Second-Order Degradation Model），通过对经典退化过程进行两次级联来模拟真实世界中更复杂的退化。其数学表达式为：
+\begin{equation}
+  \begin{aligned}
+    y_1 &= \mathcal{D}_1(x) = (x \otimes k_1)\!\downarrow_{s_1} + n_1 \\
+    y   &= \mathcal{D}_2(y_1) = (y_1 \otimes k_2)\!\downarrow_{s_2} + n_2
+  \end{aligned}
+  \label{eq:second_order_degradation}
+\end{equation}
+其中，$\mathcal{D}_1$ 和 $\mathcal{D}_2$ 分别表示第一阶和第二阶退化过程，每阶退化包含各自独立的模糊核 $k_i$、下采样操作 $\downarrow_{s_i}$ 和噪声 $n_i$。此外，二阶退化模型还在每阶退化后引入JPEG压缩伪影作为额外的退化因素，进一步增加了退化的多样性。
+
+Zhang等人在BSRGAN\cite{zhang2021designing}中提出了退化随机化策略（Degradation Shuffling），将退化过程中的各个步骤（模糊、下采样、噪声、压缩）进行随机排列组合，而非按照固定顺序执行。这种随机化策略使得模型在训练过程中能够接触到更加丰富多样的退化模式，从而增强对真实世界退化的适应能力。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\textwidth]{example-image}
+  \bicaption{二阶退化模型流程示意图}{Pipeline of second-order degradation model}
+  \label{fig:second_order_degradation}
+\end{figure}
+
+如\autoref{fig:second_order_degradation}所示，二阶退化模型通过两次级联退化过程生成训练数据，每阶退化均包含模糊、下采样、噪声和压缩等操作，能够模拟真实世界中更加复杂的退化情况。复杂退化模型的提出显著提升了超分辨率模型在真实场景下的泛化性能，为本文后续研究提供了重要的退化建模基础。
+
+\section{卷积神经网络基础}{Fundamentals of Convolutional Neural Networks}
+
+卷积神经网络通过"局部连接、权值共享、多层级非线性变换"的方式对图像进行特征表征，是当前视觉任务中最常用的特征提取网络之一。本节介绍CNN中与图像超分辨率密切相关的基本组件，包括卷积运算、残差学习、注意力机制以及归一化与激活函数。
+
+\subsection{卷积运算}{Convolution Operation}
+
+卷积层是CNN的核心组件，通过卷积核在局部感受野内进行滑动运算来提取特征。设输入特征图为 $X\in\mathbb{R}^{H\times W\times C_{in}}$，卷积核为 $K\in\mathbb{R}^{k\times k\times C_{in}\times C_{out}}$，则卷积输出特征图 $Y\in\mathbb{R}^{H'\times W'\times C_{out}}$ 中每个位置 $(i,j)$ 的第 $c$ 个通道值可表示为：
+\begin{equation}
+  Y(i,j,c)=\sum_{u=1}^{k}\sum_{v=1}^{k}\sum_{c'=1}^{C_{in}}K(u,v,c',c)\,X(i+u,j+v,c') + b(c)
+  \label{eq:conv_operation}
+\end{equation}
+其中，$k$ 为卷积核大小，$C_{in}$ 和 $C_{out}$ 分别为输入和输出通道数，$b(c)$ 为偏置项。卷积层通过权值共享机制有效降低参数量并增强平移不变性。
+
+输出特征图的空间尺寸由输入尺寸、卷积核大小、步幅（stride，$s$）和填充（padding，$p$）共同决定：
+\begin{equation}
+  H' = \left\lfloor \frac{H - k + 2p}{s} \right\rfloor + 1
+  \label{eq:conv_output_size}
+\end{equation}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.6\textwidth]{example-image}
+  \bicaption{卷积运算过程示意图}{Illustration of convolution operation}
+  \label{fig:conv_operation}
+\end{figure}
+
+如\autoref{fig:conv_operation}所示，卷积核在输入特征图上逐位置滑动，每个位置进行局部区域的加权求和运算，生成输出特征图中对应位置的值。在超分辨率网络中，$3\times3$ 卷积因其感受野适中、参数量合理而被最广泛使用。
+
+\subsection{残差学习}{Residual Learning}
+
+残差学习（Residual Learning）由He等人在ResNet\cite{he2016deep}中提出，是现代深度网络设计的基础技术之一。残差学习通过引入跳跃连接（Skip Connection），使网络学习输入与输出之间的残差映射而非直接映射，有效缓解了深层网络的梯度消失和退化问题。
+
+设残差块的输入为 $X$，则残差块的输出为：
+\begin{equation}
+  Y = \mathcal{F}(X, \{W_i\}) + X
+  \label{eq:residual_block}
+\end{equation}
+其中，$\mathcal{F}(X, \{W_i\})$ 表示残差函数，通常由两层或三层卷积及激活函数组成，$X$ 为恒等映射的跳跃连接。当残差函数的输入输出维度不一致时，可通过 $1\times1$ 卷积进行维度调整。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.55\textwidth]{example-image}
+  \bicaption{残差块结构示意图}{Architecture of residual block}
+  \label{fig:residual_block}
+\end{figure}
+
+如\autoref{fig:residual_block}所示，残差块通过跳跃连接将输入直接加到输出上，使网络只需学习残差部分。在图像超分辨率任务中，低分辨率图像与高分辨率图像之间的大部分信息是共享的，残差学习使网络能够专注于学习两者之间的高频差异部分，显著提升了超分辨率网络的训练效率和重建质量。EDSR\cite{lim2017enhanced}、RDN\cite{zhang2018residual}等经典超分辨率网络均采用了残差学习策略。
+
+\subsection{注意力机制}{Attention Mechanism}
+
+注意力机制使网络能够自适应地聚焦于输入中更重要的特征区域或通道，从而提升特征表达的针对性和有效性。在图像超分辨率中，注意力机制被广泛应用于增强高频纹理区域的特征响应和抑制背景噪声的干扰。
+
+\textbf{通道注意力。}通道注意力机制通过学习各通道的重要性权重，自适应地调整不同通道特征的贡献。Hu等人在SE-Net\cite{hu2018senet}中提出了"压缩-激励"（Squeeze-and-Excitation）机制，首先通过全局平均池化将特征图压缩为通道描述向量，然后通过两层全连接网络生成通道注意力权重：
+\begin{equation}
+  \begin{aligned}
+    z_c &= \frac{1}{H\times W}\sum_{i=1}^{H}\sum_{j=1}^{W}X(i,j,c) \\
+    s   &= \sigma(W_2\,\delta(W_1\,z))
+  \end{aligned}
+  \label{eq:channel_attention}
+\end{equation}
+其中，$z\in\mathbb{R}^{C}$ 为全局平均池化后的通道统计向量，$W_1\in\mathbb{R}^{C/r\times C}$ 和 $W_2\in\mathbb{R}^{C\times C/r}$ 为全连接层参数，$r$ 为压缩比，$\delta$ 为ReLU激活函数，$\sigma$ 为Sigmoid函数。最终输出为 $\hat{X}_c = s_c \cdot X_c$，即通过通道权重对原始特征进行逐通道缩放。Zhang等人在RCAN\cite{zhang2018image}中将通道注意力引入超分辨率网络，通过残差通道注意力块自适应地加强对超分辨率重建有贡献的特征通道。
+
+\textbf{空间注意力。}空间注意力机制关注特征图中不同空间位置的重要性差异。通过对特征图在通道维度进行聚合（如最大池化和平均池化），然后经过卷积和Sigmoid激活生成空间注意力图：
+\begin{equation}
+  M_s = \sigma(\operatorname{Conv}([\operatorname{AvgPool}(X);\,\operatorname{MaxPool}(X)]))
+  \label{eq:spatial_attention}
+\end{equation}
+其中，$[\,;\,]$ 表示在通道维度上的拼接操作，$\operatorname{Conv}$ 为 $7\times7$ 卷积。空间注意力使网络能够对纹理丰富的区域给予更高的关注度，有利于超分辨率重建中高频细节的恢复。
+
+\textbf{自注意力。}自注意力机制（Self-Attention）由Vaswani等人在Transformer\cite{vaswani2017attention}中提出，通过计算序列中所有位置之间的相关性实现全局特征交互。其核心计算为缩放点积注意力：
+\begin{equation}
+  \operatorname{Attention}(Q,K,V) = \operatorname{Softmax}\left(\frac{QK^{\top}}{\sqrt{d_k}}\right)V
+  \label{eq:self_attention}
+\end{equation}
+其中，$Q$、$K$、$V$ 分别为查询（Query）、键（Key）和值（Value）矩阵，$d_k$ 为键的维度。自注意力机制能够建立任意距离位置之间的依赖关系，在SwinIR\cite{liang2021swinir}等基于Transformer的超分辨率方法中发挥了关键作用。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\textwidth]{example-image}
+  \bicaption{通道注意力模块结构示意图}{Architecture of channel attention module}
+  \label{fig:channel_attention}
+\end{figure}
+
+如\autoref{fig:channel_attention}所示，通道注意力模块通过全局平均池化提取通道级统计信息，经过全连接网络生成通道权重，最终对输入特征进行自适应通道加权。
+
+\subsection{归一化与激活函数}{Normalization and Activation Functions}
+
+归一化和激活函数是深度网络中不可或缺的组件，分别用于稳定训练过程和引入非线性表达能力。
+
+\textbf{批归一化。}批归一化（Batch Normalization, BN）通过对每个小批量数据的特征进行标准化来加速训练收敛并稳定训练过程。设小批量中第 $c$ 个通道的特征值集合为 $\{x_i^c\}_{i=1}^{m}$，BN操作为：
+\begin{equation}
+  \hat{x}_i^c = \gamma^c\frac{x_i^c - \mu_B^c}{\sqrt{(\sigma_B^c)^2 + \epsilon}} + \beta^c
+  \label{eq:batch_norm}
+\end{equation}
+其中，$\mu_B^c$ 和 $(\sigma_B^c)^2$ 分别为小批量的均值和方差，$\gamma^c$ 和 $\beta^c$ 为可学习的缩放和偏移参数，$\epsilon$ 为防止除零的小常数。需要注意的是，在图像超分辨率网络中，EDSR\cite{lim2017enhanced}等工作发现移除BN层可以提升重建质量并节省显存开销，因此许多超分辨率网络不使用BN。
+
+\textbf{激活函数。}激活函数用于引入非线性，使网络能够拟合复杂的映射关系。常用的激活函数包括：
+
+ReLU（Rectified Linear Unit）：
+\begin{equation}
+  \operatorname{ReLU}(x) = \max(0, x)
+  \label{eq:relu}
+\end{equation}
+
+Leaky ReLU：
+\begin{equation}
+  \operatorname{LeakyReLU}(x) = \max(\alpha x, x), \quad 0 < \alpha \ll 1
+  \label{eq:leaky_relu}
+\end{equation}
+
+GELU（Gaussian Error Linear Unit）：
+\begin{equation}
+  \operatorname{GELU}(x) = x\,\Phi(x) \approx 0.5x\left(1+\tanh\left[\sqrt{2/\pi}\left(x+0.044715x^3\right)\right]\right)
+  \label{eq:gelu}
+\end{equation}
+其中，$\Phi(x)$ 为标准正态分布的累积分布函数。GELU在基于Transformer的超分辨率网络中被广泛采用，其平滑的非线性特性有助于梯度的稳定传播。
+
+\section{图像超分辨率重建基本框架}{Basic Framework of Image Super-Resolution}
+
+图像超分辨率重建网络的核心功能是将低分辨率输入图像映射为高分辨率输出图像。本节介绍超分辨率网络中的上采样策略和损失函数设计，这些是构建超分辨率系统的基础组件。
+
+\subsection{上采样策略}{Upsampling Strategies}
+
+上采样策略决定了超分辨率网络在何处以及如何将低分辨率特征恢复至目标分辨率。根据上采样操作在网络中的位置，现有方法可分为预上采样、后上采样和渐进上采样三种框架。
+
+\textbf{预上采样框架。}预上采样框架首先使用传统插值方法（如双三次插值）将低分辨率图像上采样至目标分辨率，然后在高分辨率空间中通过卷积网络进行细节增强和去伪影处理。这种框架结构简单，但在高分辨率空间进行计算导致了较大的计算开销。SRCNN\cite{dong2014learning}和VDSR\cite{kim2016accurate}采用了该框架。
+
+\textbf{后上采样框架。}后上采样框架在低分辨率空间中进行主要的特征提取和变换，仅在网络末端通过上采样模块将特征恢复至高分辨率。这种设计显著降低了计算量，因为大部分运算在低分辨率空间完成。常用的上采样模块包括转置卷积和亚像素卷积。
+
+亚像素卷积（Sub-Pixel Convolution）\cite{shi2016real}通过学习一组通道数为 $s^2C$ 的卷积滤波器，然后对输出特征进行周期性重排（Pixel Shuffle）操作得到分辨率提升 $s$ 倍的特征图：
+\begin{equation}
+  \operatorname{PixelShuffle}(X)_{i,j,c} = X_{\lfloor i/s \rfloor, \lfloor j/s \rfloor, c \cdot s^2 + (i \bmod s) \cdot s + (j \bmod s)}
+  \label{eq:pixel_shuffle}
+\end{equation}
+EDSR\cite{lim2017enhanced}、RCAN\cite{zhang2018image}等主流超分辨率网络均采用后上采样框架配合亚像素卷积。
+
+\textbf{渐进上采样框架。}渐进上采样框架通过多个阶段逐步将分辨率从低到高逐级提升，每个阶段提升固定倍率（如 $2\times$）。这种框架将超分辨率的难度分解到多个阶段，降低了单阶段的学习难度，尤其适用于大倍率超分辨率任务。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\textwidth]{example-image}
+  \bicaption{三种上采样框架对比示意图}{Comparison of three upsampling frameworks}
+  \label{fig:upsampling_frameworks}
+\end{figure}
+
+如\autoref{fig:upsampling_frameworks}所示，三种上采样框架在网络中上采样操作的位置不同：预上采样在网络输入端进行，后上采样在网络输出端进行，渐进上采样则在网络中间逐步进行。
+
+\subsection{损失函数}{Loss Functions}
+
+损失函数定义了超分辨率网络的优化目标，直接影响重建结果的质量和特性。不同的损失函数关注图像质量的不同方面，在实际应用中通常将多种损失函数进行组合使用。
+
+\textbf{像素级损失。}像素级损失直接衡量超分辨率结果与真实高分辨率图像在像素层面的差异。常用的像素级损失包括L1损失和L2损失：
+\begin{equation}
+  \mathcal{L}_{L1} = \frac{1}{N}\sum_{i=1}^{N}|\hat{y}_i - y_i|, \quad
+  \mathcal{L}_{L2} = \frac{1}{N}\sum_{i=1}^{N}(\hat{y}_i - y_i)^2
+  \label{eq:pixel_loss}
+\end{equation}
+其中，$\hat{y}$ 为超分辨率输出，$y$ 为真实高分辨率图像，$N$ 为像素总数。L1损失对异常值更加鲁棒，在超分辨率任务中通常优于L2损失。此外，Charbonnier损失作为L1损失的平滑近似也被广泛使用：
+\begin{equation}
+  \mathcal{L}_{Char} = \frac{1}{N}\sum_{i=1}^{N}\sqrt{(\hat{y}_i - y_i)^2 + \epsilon^2}
+  \label{eq:charbonnier_loss}
+\end{equation}
+其中，$\epsilon$ 为小常数（通常取 $10^{-3}$），使得损失函数在零点处可微。
+
+\textbf{感知损失。}Johnson等人提出的感知损失（Perceptual Loss）\cite{johnson2016perceptual}利用预训练VGG网络\cite{simonyan2014very}提取的高层特征来衡量超分辨率图像与真实图像在感知层面的差异：
+\begin{equation}
+  \mathcal{L}_{percep} = \frac{1}{C_l H_l W_l}\sum_{c,i,j}\left(\phi_l(\hat{y})_{c,i,j} - \phi_l(y)_{c,i,j}\right)^2
+  \label{eq:perceptual_loss}
+\end{equation}
+其中，$\phi_l(\cdot)$ 表示VGG网络第 $l$ 层的特征提取函数，$C_l$、$H_l$、$W_l$ 分别为该层特征图的通道数、高度和宽度。感知损失关注图像的高层语义信息和纹理结构，能够引导网络生成感知质量更高的超分辨率图像。
+
+\textbf{对抗损失。}在基于GAN的超分辨率方法中，对抗损失用于驱动生成器产生判别器难以区分的逼真图像。标准的对抗损失为：
+\begin{equation}
+  \mathcal{L}_{adv} = -\mathbb{E}[\log D(\hat{y})]
+  \label{eq:adversarial_loss}
+\end{equation}
+其中，$D(\cdot)$ 为判别器的输出概率。对抗损失促使生成器学习真实图像的分布，产生纹理丰富、视觉逼真的超分辨率结果。
+
+在实际应用中，超分辨率网络的总损失通常为上述损失的加权组合：
+\begin{equation}
+  \mathcal{L}_{total} = \lambda_1\mathcal{L}_{pixel} + \lambda_2\mathcal{L}_{percep} + \lambda_3\mathcal{L}_{adv}
+  \label{eq:total_loss}
+\end{equation}
+其中，$\lambda_1$、$\lambda_2$、$\lambda_3$ 为各项损失的权重系数，需要根据具体任务进行调整。
+
+\section{生成对抗网络}{Generative Adversarial Networks}
+
+生成对抗网络（Generative Adversarial Network, GAN）是图像超分辨率中实现高感知质量重建的核心技术之一。本节介绍GAN的基本原理、条件GAN以及GAN的训练策略。
+
+\subsection{GAN基本原理}{Basic Principle of GAN}
+
+GAN由Goodfellow等人\cite{goodfellow2014generative}于2014年提出，由生成器（Generator, $G$）和判别器（Discriminator, $D$）两个网络组成，通过对抗训练的方式学习数据分布。生成器的目标是生成逼真的样本以欺骗判别器，判别器的目标是区分真实样本和生成样本。两者构成一个最小最大博弈（Minimax Game），其优化目标为：
+\begin{equation}
+  \min_G\max_D\,\mathcal{L}_{GAN}(G,D) = \mathbb{E}_{x\sim p_{data}}[\log D(x)] + \mathbb{E}_{z\sim p_z}[\log(1-D(G(z)))]
+  \label{eq:gan_objective}
+\end{equation}
+其中，$p_{data}$ 为真实数据分布，$p_z$ 为先验噪声分布（通常为高斯分布或均匀分布），$G(z)$ 为生成器以噪声 $z$ 为输入生成的样本。在理想情况下，当博弈达到纳什均衡时，生成器学到的分布 $p_g$ 等于真实数据分布 $p_{data}$，此时判别器的输出恒为 $1/2$。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.7\textwidth]{example-image}
+  \bicaption{生成对抗网络基本架构示意图}{Basic architecture of Generative Adversarial Network}
+  \label{fig:gan_architecture}
+\end{figure}
+
+如\autoref{fig:gan_architecture}所示，生成器从噪声分布中采样生成图像，判别器对真实图像和生成图像进行二分类判断，两者通过对抗训练不断提升各自的能力。
+
+\subsection{条件生成对抗网络}{Conditional GAN}
+
+条件GAN（Conditional GAN, cGAN）在原始GAN的基础上引入条件信息来约束生成过程。在图像超分辨率任务中，低分辨率图像作为条件输入，生成器以低分辨率图像为条件生成对应的高分辨率图像。条件GAN的优化目标为：
+\begin{equation}
+  \min_G\max_D\,\mathcal{L}_{cGAN} = \mathbb{E}_{x,y}[\log D(x,y)] + \mathbb{E}_{x}[\log(1-D(x,G(x)))]
+  \label{eq:cgan_objective}
+\end{equation}
+其中，$x$ 为低分辨率条件图像，$y$ 为对应的高分辨率真实图像。SRGAN\cite{ledig2017photo}和ESRGAN\cite{wang2018esrgan}均采用条件GAN的框架进行图像超分辨率重建。
+
+\subsection{GAN训练策略}{GAN Training Strategies}
+
+GAN的训练过程存在训练不稳定、模式坍塌（Mode Collapse）等已知挑战。为此，研究者提出了多种训练策略来改善GAN的训练稳定性和生成质量。
+
+\textbf{Relativistic GAN。}ESRGAN\cite{wang2018esrgan}引入了Relativistic判别器，将判别器的输出从"输入是否为真实图像"改为"输入图像比另一张图像更真实的概率"，增强了训练信号的信息量：
+\begin{equation}
+  D_{Ra}(x_r, x_f) = \sigma(C(x_r) - \mathbb{E}[C(x_f)])
+  \label{eq:relativistic_discriminator}
+\end{equation}
+其中，$x_r$ 为真实图像，$x_f$ 为生成图像，$C(\cdot)$ 为判别器的非Sigmoid输出。
+
+\textbf{谱归一化。}谱归一化（Spectral Normalization）通过约束判别器每层的谱范数来控制其Lipschitz常数，从而稳定训练过程。
+
+\textbf{渐进训练。}在超分辨率GAN的训练中，通常采用先用L1/L2损失预训练生成器，再加入对抗损失和感知损失进行微调的两阶段训练策略，以获得更好的训练稳定性和生成质量。
+
+\section{盲超分辨率的退化估计方法}{Degradation Estimation Methods for Blind Super-Resolution}
+
+盲超分辨率的核心挑战在于如何在退化过程未知的条件下实现高质量的图像重建。退化估计方法旨在从低分辨率图像中获取退化相关信息，以指导超分辨率重建网络进行自适应重建。根据退化信息的表示方式，现有方法可分为显式退化估计和隐式退化表示两大类。
+
+\subsection{显式退化估计}{Explicit Degradation Estimation}
+
+显式退化估计方法直接估计退化参数（如模糊核的形状和大小），然后将估计的退化信息作为先验知识输入超分辨率网络。这类方法的优点是退化信息具有明确的物理含义，可解释性强。
+
+Gu等人提出的IKC\cite{gu2019blind}采用迭代核校正策略，设计了核估计网络和超分辨率网络的交替迭代框架。在每次迭代中，核估计网络根据当前超分辨率结果的残差信息修正模糊核估计，超分辨率网络根据更新后的核估计进行图像重建，通过多轮迭代逐步提升核估计的准确性和重建质量。
+
+Bell-Kligler等人提出的KernelGAN\cite{bell2019kernelgan}利用图像内部的跨尺度自相似性，通过在测试时训练一个小型内部GAN来估计图像特定的退化核。该方法无需外部训练数据，能够针对每张输入图像估计其特定的退化核，但推理时间较长。
+
+Liang等人提出的MANet\cite{liang2021mutual}引入互仿射网络估计空间变化的退化核。与传统方法假设退化核在空间上均匀分布不同，MANet能够预测图像不同区域的局部退化核，更加贴合真实场景中退化的空间变化特性。
+
+显式退化估计方法的主要局限在于：估计精度直接影响超分辨率重建质量，估计误差会在后续重建过程中被放大；此外，当退化类型超出模糊核的参数化表示范围（如压缩伪影、传感器噪声等）时，显式方法难以有效建模。
+
+\subsection{隐式退化表示}{Implicit Degradation Representation}
+
+隐式退化表示方法不显式估计退化参数，而是将退化信息编码为高维特征向量（退化表示），利用该表示来指导超分辨率网络进行自适应重建。这类方法能够处理更广泛的退化类型，对退化建模的假设更少。
+
+Luo等人提出的DAN\cite{luo2020unfolding}将交替优化过程展开为端到端的深度网络，交替执行退化估计和图像恢复两个步骤。退化估计器从当前恢复结果中提取退化表示，恢复器根据退化表示进行自适应超分辨率重建，整个过程通过端到端训练联合优化。
+
+Wang等人提出的DASR\cite{wang2021unsupervised}采用对比学习策略无监督地学习退化表示。通过将相同退化类型的图像块拉近、不同退化类型的图像块推远，DASR在特征空间中构建了具有区分度的退化表示，使超分辨率网络能够根据退化表示自适应地调整重建策略。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\textwidth]{example-image}
+  \bicaption{显式退化估计与隐式退化表示方法对比}{Comparison of explicit degradation estimation and implicit degradation representation}
+  \label{fig:degradation_estimation}
+\end{figure}
+
+如\autoref{fig:degradation_estimation}所示，显式退化估计方法直接预测退化参数（如模糊核），隐式退化表示方法则将退化信息编码为特征向量。两类方法各有优势：显式方法可解释性强但建模范围有限，隐式方法适用范围广但缺乏物理可解释性。本文后续章节将结合两类方法的优势，设计面向复杂退化的退化感知策略。
+
+\section{常用评价指标}{Evaluation Metrics}
+
+图像超分辨率的评价指标用于定量衡量重建结果的质量，可分为全参考指标（需要真实高分辨率图像作为参考）和无参考指标两大类。本节介绍本文实验中使用的主要评价指标。
+
+\textbf{峰值信噪比（PSNR）。}PSNR是最广泛使用的全参考图像质量评价指标，基于均方误差（MSE）计算：
+\begin{equation}
+  \operatorname{PSNR} = 10\log_{10}\frac{L^2}{\operatorname{MSE}}, \quad \operatorname{MSE} = \frac{1}{HWC}\sum_{i,j,c}(\hat{y}_{i,j,c} - y_{i,j,c})^2
+  \label{eq:psnr}
+\end{equation}
+其中，$L$ 为像素值的最大取值（8位图像为255），$\hat{y}$ 和 $y$ 分别为超分辨率结果和真实图像。PSNR值越高表示失真越小，单位为分贝（dB）。需要注意的是，PSNR与人类视觉感知之间存在一定差距，高PSNR值不一定意味着更好的视觉质量。
+
+\textbf{结构相似性（SSIM）。}SSIM\cite{wang2004image}从亮度、对比度和结构三个维度衡量两幅图像的相似性：
+\begin{equation}
+  \operatorname{SSIM}(\hat{y}, y) = \frac{(2\mu_{\hat{y}}\mu_y + C_1)(2\sigma_{\hat{y}y} + C_2)}{(\mu_{\hat{y}}^2 + \mu_y^2 + C_1)(\sigma_{\hat{y}}^2 + \sigma_y^2 + C_2)}
+  \label{eq:ssim}
+\end{equation}
+其中，$\mu_{\hat{y}}$ 和 $\mu_y$ 分别为两幅图像的局部均值，$\sigma_{\hat{y}}^2$ 和 $\sigma_y^2$ 为局部方差，$\sigma_{\hat{y}y}$ 为局部协方差，$C_1$ 和 $C_2$ 为稳定常数。SSIM的取值范围为 $[0,1]$，值越大表示结构相似性越高。
+
+\textbf{学习感知图像块相似性（LPIPS）。}LPIPS\cite{zhang2018unreasonable}利用预训练深度网络提取的特征来衡量两幅图像在感知层面的差异：
+\begin{equation}
+  \operatorname{LPIPS}(\hat{y}, y) = \sum_l \frac{1}{H_l W_l}\sum_{i,j}\|w_l \odot (\phi_l(\hat{y})_{i,j} - \phi_l(y)_{i,j})\|_2^2
+  \label{eq:lpips}
+\end{equation}
+其中，$\phi_l$ 为预训练网络第 $l$ 层的特征提取函数，$w_l$ 为学习到的通道权重。LPIPS值越低表示感知相似度越高。LPIPS相比PSNR和SSIM更加符合人类视觉感知。
+
+\textbf{弗雷歇初始距离（FID）。}FID\cite{heusel2017gans}通过计算真实图像集合和生成图像集合在Inception网络特征空间中的分布距离来评估生成图像的整体质量：
+\begin{equation}
+  \operatorname{FID} = \|\mu_r - \mu_g\|_2^2 + \operatorname{Tr}(\Sigma_r + \Sigma_g - 2(\Sigma_r\Sigma_g)^{1/2})
+  \label{eq:fid}
+\end{equation}
+其中，$(\mu_r, \Sigma_r)$ 和 $(\mu_g, \Sigma_g)$ 分别为真实图像和生成图像的特征均值向量和协方差矩阵。FID值越低表示生成质量越高。
+
+\textbf{自然图像质量评价器（NIQE）。}NIQE\cite{mittal2012making}是一种无参考图像质量评价指标，通过计算测试图像特征分布与自然图像统计模型之间的距离来评估图像质量，无需真实参考图像。NIQE值越低表示图像越接近自然图像的统计特性，质量越高。
+
+\begin{table}[htbp]
+  \bicaption{常用图像质量评价指标对比}{Comparison of common image quality assessment metrics}
+  \label{tab:metrics_comparison}
+  \begin{tabular}{cccc}
+    \toprule
+    评价指标 & 参考类型 & 评价维度 & 最优方向 \\
+    \midrule
+    PSNR     & 全参考   & 像素保真度 & 越高越好 \\
+    SSIM     & 全参考   & 结构相似性 & 越高越好 \\
+    LPIPS    & 全参考   & 感知相似性 & 越低越好 \\
+    FID      & 分布级   & 生成质量   & 越低越好 \\
+    NIQE     & 无参考   & 自然度     & 越低越好 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+如\autoref{tab:metrics_comparison}所示，不同评价指标从不同维度衡量图像质量。在本文实验中，将综合使用上述指标对超分辨率重建结果进行全面评估，其中PSNR和SSIM主要用于评价像素级保真度，LPIPS用于评价感知质量，FID和NIQE用于评价整体生成质量和自然度。
+
+\section{本章小结}{Summary}
+
+本章系统介绍了本文研究所涉及的核心理论与技术基础。首先，介绍了图像退化模型，包括经典退化模型和二阶退化模型等真实世界复杂退化模型，为后续章节的退化感知策略设计奠定了基础。其次，介绍了卷积神经网络的基本组件，包括卷积运算、残差学习、注意力机制以及归一化与激活函数，这些是构建超分辨率网络的核心模块。然后，概述了图像超分辨率重建的基本框架，包括预上采样、后上采样、渐进上采样三种上采样策略以及像素级损失、感知损失和对抗损失三类损失函数。接着，介绍了生成对抗网络的基本原理、条件GAN以及训练策略，为基于GAN的超分辨率方法提供了理论支撑。之后，梳理了盲超分辨率中显式退化估计和隐式退化表示两类退化估计方法，分析了各自的优势与局限。最后，给出了PSNR、SSIM、LPIPS、FID和NIQE等常用评价指标的定义与特性。
+
+上述理论与技术为本文第三章和第四章的方法设计提供了必要的基础支撑。第三章和第四章将在此基础上，针对复杂退化场景下的盲超分辨率重建问题，分别提出具有针对性的改进方法。
